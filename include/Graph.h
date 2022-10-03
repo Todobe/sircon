@@ -13,8 +13,10 @@ public:
     int nodeCount{}, edgeCount{};
     vector<vector<int > > to,fro;
     vector<double> eta;
+    double eigenValue;
+    vector<double> leftEigVec, rightEigVec;
     explicit Graph(const ConfigArgs &args);
-    vector<pair<int,int> > simulate(const vector<int> &R, const vector<int> &T, double pR,double pT,int round);
+    vector<pair<int,int> > simulate(const vector<int> &R, const vector<int> &T, double pR,double pT,int round, const vector<pair<int,int> > &DelEdge);
 };
 
 

@@ -7,6 +7,9 @@ import argparse
 
 from collections import defaultdict
 
+import numpy as np
+from scipy import linalg
+
 userIDCount = 0
 userIDMap = {}
 
@@ -48,9 +51,8 @@ if __name__ == "__main__":
     parser.add_argument('--data_path', default="Video_Games.json.gz", type=str, help='data path')
     parser.add_argument('--meta_data_path', default="meta_Video_Games.json.gz", type=str, help='meta data path')
     parser.add_argument('--output_file', default="./Video_game_network.txt", type=str, help='output file')
-    parser.add_argument('--big_user_bound', default=100, type=int, help='big user bound')
     parser.add_argument('--item_bound', default=500, type=int, help='item bound')
-    parser.add_argument('--user_bound', default=10, type=int, help='user bound')
+    parser.add_argument('--user_bound', default=50, type=int, help='user bound')
     args = parser.parse_args()
 
     userCount=defaultdict(int)
@@ -63,7 +65,6 @@ if __name__ == "__main__":
     user_buy = defaultdict(list)  # 'user' -> [('item','time')]
     edges_weight = {}  # item edge -> weight
     item_user = defaultdict(list)  # {'item: ['user']}
-    big_user_cnt = 0
     edge_num = 0
     for d in parse(args.meta_data_path):
         if itemCount[d['asin']] < args.item_bound:
@@ -80,8 +81,6 @@ if __name__ == "__main__":
         userID = getUserID(d['reviewerID'])
         itemID = getItemID(d['asin'])
         user_buy[userID].append((itemID, get_time_stamp(d['reviewTime'])))
-        if len(user_buy[userID]) == args.big_user_bound:
-            big_user_cnt = big_user_cnt + 1
         item_user[itemID].append(userID)
 
     for user in user_buy:
@@ -108,12 +107,26 @@ if __name__ == "__main__":
     if not os.path.exists(os.path.dirname(args.output_file)):
         os.makedirs(os.path.dirname(args.output_file))
 
+    adjMat = [[0]*itemIDCount]*itemIDCount
     with open(args.output_file, "w") as file:
         file.write(f"{itemIDCount} {edge_num}\n")
         for edge in edges_weight:
             weight = edges_weight[edge]
-            if weight != 0:
+            if weight != 0 and edge[0]!=edge[1]:
+                adjMat[edge[0]][edge[1]]=1
+                adjMat[edge[1]][edge[0]]=1
                 file.write(f"{edge[0]} {edge[1]}\n")
+
+        A = np.array(adjMat)
+
+        (eva,evt) = linalg.eigh(A)
+        file.write(f"{eva[-1]}\n")
+        for val in evt[-1]:
+            file.write(f"{val} ")
+        file.write("\n")
+        for val in evt[-1]:
+            file.write(f"{val} ")
+        file.write("\n")
         file.close()
 
-    print(itemIDCount, edge_num, big_user_cnt)
+    print(itemIDCount, edge_num)

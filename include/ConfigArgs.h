@@ -1,6 +1,7 @@
 #ifndef SIRCON_CONFIGARGS_H
 #define SIRCON_CONFIGARGS_H
 #include <string>
+#include <fstream>
 using namespace std;
 
 int getRandInt(int l,int r);
@@ -13,8 +14,11 @@ public:
     int theta,MonteCarlosTimes; //Sampling times
     double beta,alpha,alpha2,delta;
     int TimeRound,TruthNodeCount,RumorNodeCount;
+    int DelEdgeCount;
+    string alg;
     ConfigArgs();
     bool Parse(int argc, char* argv[]);
+    void print(ofstream &out);
 };
 
 

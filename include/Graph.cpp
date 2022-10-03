@@ -4,6 +4,7 @@
 #include <iostream>
 #include <queue>
 #include <set>
+#include <algorithm>
 
 using namespace std;
 
@@ -23,13 +24,29 @@ Graph::Graph(const ConfigArgs &args) {
         to[u].push_back(v);
         fro[v].push_back(u);
     }
-    eta=vector<double>(nodeCount);
+
+    netFile>>eigenValue;
+    leftEigVec = vector<double>(nodeCount);
+    rightEigVec = vector<double>(nodeCount);
     for(int i=0;i<nodeCount;i++){
-        eta[i]=args.beta*fro[i].size()/(1+args.beta*fro[i].size());
+        netFile>>leftEigVec[i];
+    }
+    for(int i=0;i<nodeCount;i++){
+        netFile>>rightEigVec[i];
+    }
+    eta=vector<double>(nodeCount);
+    if(args.alg=="Ris-Deg" || args.alg=="Lon-Deg") {
+        for (int i = 0; i < nodeCount; i++) {
+            eta[i] = args.beta * fro[i].size() / (1 + args.beta * fro[i].size());
+        }
+    }else{
+        for (int i = 0; i < nodeCount; i++) {
+            eta[i] = args.beta * eigenValue / (1 + args.beta * eigenValue);
+        }
     }
 }
 
-vector<pair<int, int> > Graph::simulate(const vector<int> &R, const vector<int> &T, double pR, double pT,int round) {
+vector<pair<int, int> > Graph::simulate(const vector<int> &R, const vector<int> &T, double pR, double pT,int round,const vector<pair<int,int> > &DelEdge) {
     vector<pair<int,int> > res;
     vector<int> stat(nodeCount,0);
     set<int> changedNodes;
@@ -56,6 +73,8 @@ vector<pair<int, int> > Graph::simulate(const vector<int> &R, const vector<int> 
             auto cur=queR.front();
             queR.pop();
             for(auto v:to[cur]){
+                if(binary_search(DelEdge.begin(),DelEdge.end(),make_pair(cur,v))) continue;
+                if(binary_search(DelEdge.begin(),DelEdge.end(), make_pair(v,cur))) continue;
                 if(stat[v]!=1 && getRandFloat()<pR){
                     changedNodes.insert(v);
                     cnt[stat[v]]--; cnt[1]++;
