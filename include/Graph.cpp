@@ -1,6 +1,5 @@
 #include "Graph.h"
 
-#include <fstream>
 #include <iostream>
 #include <queue>
 #include <set>
@@ -8,7 +7,7 @@
 
 using namespace std;
 
-Graph::Graph(const ConfigArgs &args) {
+Graph::Graph(const ConfigArgs &args, ofstream &out) {
     ifstream netFile;
     netFile.open(args.network_file,ios::in);
     if(!netFile.is_open()){
@@ -44,6 +43,8 @@ Graph::Graph(const ConfigArgs &args) {
             eta[i] = args.beta * eigenValue / (1 + args.beta * eigenValue);
         }
     }
+    T=args.T;
+    out<<"Read graph from "<<args.network_file<<" done. Total "<<nodeCount<<" nodes, "<<edgeCount<<" edges."<<endl;
 }
 
 vector<pair<int, int> > Graph::simulate(const vector<int> &R, const vector<int> &T, double pR, double pT,int round,const vector<pair<int,int> > &DelEdge) {
@@ -52,15 +53,15 @@ vector<pair<int, int> > Graph::simulate(const vector<int> &R, const vector<int> 
     set<int> changedNodes;
     queue<int> queR,queT;
     int cnt[3]={nodeCount,0,0};
-    for(auto rNode:R){
-        cnt[0]--; cnt[1]++;
-        stat[rNode]=1;
-        changedNodes.insert(rNode);
-    }
     for(auto tNode:T){
         cnt[stat[tNode]]--; cnt[2]++;
         stat[tNode]=2;
         changedNodes.insert(tNode);
+    }
+    for(auto rNode:R){
+        cnt[stat[rNode]]--; cnt[1]++;
+        stat[rNode]=1;
+        changedNodes.insert(rNode);
     }
     res.emplace_back(cnt[1],cnt[2]);
     for(int rnd=1;rnd<=round;rnd++){

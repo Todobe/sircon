@@ -3,9 +3,13 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <ctime>
 
 Generator::Generator()= default;
 
+bool VisLV[100000];
+int Cnt[100000];
+vector<int> UU[100000];
 
 vector<int> Generator::generateRRSet(const Graph &G,int v,double p) {
     map<int,bool> vis;
@@ -33,8 +37,31 @@ bool Generator::generateRRSets(const Graph &G, int theta, double p) {
     for(int v=0;v<G.nodeCount;v++){
         RRSets[v]=vector<vector<int> >(theta);
         for(int i=0;i<theta;i++){
-            RRSets[v].push_back(generateRRSet(G,v,p));
+            //RRSets[v].push_back(generateRRSet(G,v,p));
+            vector<int> Lv;
+            int Phi=int(G.T);
+            map<int, int> vis;
+            queue<int> que;
+            que.push(v);
+            vis[v]=0;
+            Lv.push_back(v);
+            while(!que.empty()){
+                int cur=que.front();
+                que.pop();
+                for(auto u:G.fro[cur]){
+                    if(vis.count(u)==0 && getRandFloat()<=p){
+                        vis[u]=vis[cur]+1;
+                        Lv.push_back(u);
+                        if(vis[u]<Phi) {
+                            que.push(u);
+                        }
+                    }
+                }
+            }
+            sort(Lv.begin(),Lv.end());
+            RRSets[v].push_back(Lv);
         }
+
     }
     return true;
 }
@@ -58,6 +85,7 @@ bool Generator::generateLvSets(const Graph &G, double alpha2, double delta) {
     for(int v=0;v<G.nodeCount;v++){
         vector<int> Lv;
         int Phi=floor(log(alpha2*G.eta[v])/log(delta));
+        Phi=min(Phi,int(G.T));
         map<int, int> vis;
         queue<int> que;
         que.push(v);
@@ -77,6 +105,10 @@ bool Generator::generateLvSets(const Graph &G, double alpha2, double delta) {
             }
         }
         sort(Lv.begin(),Lv.end());
+        for(auto node:Lv){
+            Cnt[node]++;
+            UU[node].push_back(v);
+        }
         LvSets[v]=Lv;
     }
     return true;
@@ -93,6 +125,10 @@ bool Generator::generateIMMRRSets(const Graph &G, int theta, double p) {
     for(int i=0;i<theta;i++){
         int v= getRandInt(0,G.nodeCount);
         IMMRRSets.push_back(generateRRSet(G,v,p));
+        for(auto node:IMMRRSets[i]){
+            Cnt[node]++;
+            UU[node].push_back(i);
+        }
     }
     return true;
 }
@@ -114,10 +150,12 @@ double Generator::FR(const Graph &G,const vector<int> &S, int u) {
 }
 
 
-vector<int> RisGreedy(Graph &G,int k, int theta, double alpha, double delta){
+vector<int> RisGreedy(Graph &G,int k, int theta, double alpha, double delta, vector<double> & algTime){
+    algTime.clear();
     vector<int> Sg;
     Generator RRSet;
     RRSet.generateRRSets(G,theta,delta);
+    clock_t start_time=clock();
     while(Sg.size()<k){
         int  max_u=0;
         double maxScore=0;
@@ -134,34 +172,44 @@ vector<int> RisGreedy(Graph &G,int k, int theta, double alpha, double delta){
             }
         }
         Sg.push_back(max_u);
+        algTime.push_back((clock()-start_time)/CLOCKS_PER_SEC);
     }
     return Sg;
 }
 
-vector<int> LonGreedy(Graph &G,int k, double alpha2, double delta){
+vector<int> LonGreedy(Graph &G,int k, double alpha2, double delta, vector<double> & algTime){
+    algTime.clear();
+    clock_t start_time=clock();
     vector<int> SL;
     Generator LvSet;
     LvSet.generateLvSets(G,alpha2,delta);
     while(SL.size()<k){
         int max_u=0,max_score=0;
         for(int u=0;u<G.nodeCount;u++){
-            SL.push_back(u);
-            int score=0;
-            for(int v=0;v<G.nodeCount;v++){
-                score+=LvSet.Lv(SL,v);
-            }
+            int score=Cnt[u];
             if(score>max_score){
                 max_score = score;
                 max_u=u;
             }
-            SL.pop_back();
+
         }
+        for(auto v:UU[max_u]){
+            if(VisLV[v]) continue;
+            VisLV[v]=true;
+            for(auto u:LvSet.LvSets[v]){
+                Cnt[u]--;
+            }
+        }
+        Cnt[max_u]=-1;
         SL.push_back(max_u);
+        algTime.push_back((clock()-start_time)/CLOCKS_PER_SEC);
     }
     return SL;
 }
 
-vector<int> ImmGreedy(Graph &G, int k, int theta, double delta){
+vector<int> ImmGreedy(Graph &G, int k, int theta, double delta, vector<double> & algTime){
+    algTime.clear();
+    clock_t start_time=clock();
     vector<int> Sk;
     Generator RRSet;
     RRSet.generateIMMRRSets(G,theta,delta);
@@ -169,18 +217,29 @@ vector<int> ImmGreedy(Graph &G, int k, int theta, double delta){
         int max_u=0;
         double max_score=0;
         for(int u=0;u<G.nodeCount;u++){
-            double score=RRSet.FR(G,Sk,u);
+            double score=Cnt[u];
             if(score>max_score){
                 max_score=score;
                 max_u=u;
             }
         }
+        for(auto v:UU[max_u]){
+            if(VisLV[v]) continue;
+            VisLV[v]=true;
+            for(auto u:RRSet.IMMRRSets[v]){
+                Cnt[u]--;
+            }
+        }
+        Cnt[max_u]=-1;
         Sk.push_back(max_u);
+        algTime.push_back((clock()-start_time)/CLOCKS_PER_SEC);
     }
     return Sk;
 }
 
-vector<int> MaxDegree(Graph &G ,int k){
+vector<int> MaxDegree(Graph &G ,int k, vector<double> & algTime){
+    algTime.clear();
+    clock_t start_time=clock();
     vector<int> T;
     vector<pair<int,int> > Deg_Node;
     for(int i=0;i<G.nodeCount;i++){
@@ -189,6 +248,7 @@ vector<int> MaxDegree(Graph &G ,int k){
     sort(Deg_Node.begin(),Deg_Node.end(),greater<pair<int,int> >());
     for(int i=0;i<k;i++){
         T.push_back(Deg_Node[i].second);
+        algTime.push_back((clock()-start_time)/CLOCKS_PER_SEC);
     }
     return T;
 }
@@ -221,10 +281,10 @@ vector<pair<int,int> > EdgeDeletion(Graph &G, int k){
 }
 
 
-vector<pair<double,double> > estimate(Graph &G,const vector<int> &R, const vector<int> &T,const vector<pair<int,int> > &DelEdge, ConfigArgs &args){
+vector<pair<double,double> > estimate(Graph &G,const vector<int> &R, const vector<int> &T,const vector<pair<int,int> > &DelEdge, ConfigArgs &args, double &simTime){
+    clock_t start_time = clock();
     vector<pair<double,double> > res=vector<pair<double,double> >(args.TimeRound+1);
     for(int i=0;i<args.MonteCarlosTimes;i++){
-        cout<<"Monte"<<i<<endl;
         vector<pair<int,int> > tmp=G.simulate(R,T,args.beta,args.delta,args.TimeRound,DelEdge);
         for(int j=0;j<res.size();j++){
             res[j].first+=tmp[j].first;
@@ -235,5 +295,7 @@ vector<pair<double,double> > estimate(Graph &G,const vector<int> &R, const vecto
         re.first/=args.MonteCarlosTimes;
         re.second/=args.MonteCarlosTimes;
     }
+    clock_t end_time = clock();
+    simTime += (end_time - start_time)/CLOCKS_PER_SEC;
     return res;
 }

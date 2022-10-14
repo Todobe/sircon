@@ -16,6 +16,8 @@ public:
     int TimeRound,TruthNodeCount,RumorNodeCount;
     int DelEdgeCount;
     string alg;
+    int T;
+    int detail,kdetail;
     ConfigArgs();
     bool Parse(int argc, char* argv[]);
     void print(ofstream &out);

@@ -4,6 +4,7 @@ import gzip
 import os
 
 import argparse
+import random
 
 from collections import defaultdict
 
@@ -51,8 +52,9 @@ if __name__ == "__main__":
     parser.add_argument('--data_path', default="Video_Games.json.gz", type=str, help='data path')
     parser.add_argument('--meta_data_path', default="meta_Video_Games.json.gz", type=str, help='meta data path')
     parser.add_argument('--output_file', default="./Video_game_network.txt", type=str, help='output file')
-    parser.add_argument('--item_bound', default=500, type=int, help='item bound')
-    parser.add_argument('--user_bound', default=50, type=int, help='user bound')
+    parser.add_argument('--rumor_file', default="./rumor.txt", type=str, help='output file')
+    parser.add_argument('--item_bound', default=100, type=int, help='item bound')
+    parser.add_argument('--user_bound', default=10, type=int, help='user bound')
     args = parser.parse_args()
 
     userCount=defaultdict(int)
@@ -94,6 +96,8 @@ if __name__ == "__main__":
     for i in range(0, itemIDCount):
         edges_weight[(i, i)] = 0
 
+
+
     for edge in edges_weight:
         if edge[0] == edge[1]:
             edges_weight[edge] = len(item_user[edge[0]]) / userIDCount
@@ -101,26 +105,30 @@ if __name__ == "__main__":
             edges_weight[edge] = 0
         else:
             edges_weight[edge] = len([val for val in item_user[edge[0]] if val in item_user[edge[1]]]) / len(item_user[edge[0]])
-        if edges_weight[edge] != 0:
+        if edges_weight[edge] != 0 and edge[0]!=edge[1]:
             edge_num = edge_num + 1
 
     if not os.path.exists(os.path.dirname(args.output_file)):
         os.makedirs(os.path.dirname(args.output_file))
 
     adjMat = [[0]*itemIDCount]*itemIDCount
+    print(itemIDCount, edge_num)
+    deg=[0]*itemIDCount
     with open(args.output_file, "w") as file:
         file.write(f"{itemIDCount} {edge_num}\n")
         for edge in edges_weight:
             weight = edges_weight[edge]
             if weight != 0 and edge[0]!=edge[1]:
+                deg[edge[0]] += 1
+                deg[edge[1]] += 1
                 adjMat[edge[0]][edge[1]]=1
                 adjMat[edge[1]][edge[0]]=1
                 file.write(f"{edge[0]} {edge[1]}\n")
 
         A = np.array(adjMat)
-
         (eva,evt) = linalg.eigh(A)
         file.write(f"{eva[-1]}\n")
+        print(eva[-1])
         for val in evt[-1]:
             file.write(f"{val} ")
         file.write("\n")
@@ -129,4 +137,18 @@ if __name__ == "__main__":
         file.write("\n")
         file.close()
 
-    print(itemIDCount, edge_num)
+    if not os.path.exists(os.path.dirname(args.rumor_file)):
+        os.makedirs(os.path.dirname(args.rumor_file))
+
+    selected = []
+    for i in range(0,itemIDCount):
+        selected.append((i,deg[i]))
+
+    selected.sort(key=lambda a:-a[1])
+
+    with open(args.rumor_file, "w") as file:
+        for i in range(0,20):
+            x = selected[random.randint(0,100)][0]
+            print(deg[x])
+            file.write(f"{x} ")
+        file.close()

@@ -10,7 +10,7 @@ using namespace clipp;
 std::mt19937 mtRand(random_device{}());
 
 int getRandInt(int l, int r){
-    uniform_int_distribution<int> uid(l, r);
+    uniform_int_distribution<int> uid(l, r-1);
     return uid(mtRand);
 }
 
@@ -24,7 +24,7 @@ ConfigArgs::ConfigArgs() {
     network_file="./data/Video_game_network.txt";
     rumor_seed_file = "";
     output_file = "output.txt";
-    TimeRound=500;
+    TimeRound=20;
     TruthNodeCount=10;
     RumorNodeCount=10;
     theta = 100;
@@ -35,7 +35,9 @@ ConfigArgs::ConfigArgs() {
     delta=0.5;
     DelEdgeCount=20;
     alg="Ris-Deg";
-
+    T=2;
+    detail=0;
+    kdetail=1;
 }
 
 bool ConfigArgs::Parse(int argc, char **argv) {
@@ -43,7 +45,7 @@ bool ConfigArgs::Parse(int argc, char **argv) {
             value("network file", network_file),
             option("-o") & value("output file", output_file),
             option("-rs") & value("rumor seed file",rumor_seed_file),
-            option("-T") & value("time round", TimeRound),
+            option("-TR") & value("time round", TimeRound),
             option("-r") & value("rumor seed count",RumorNodeCount),
             option("-theta") & value("theta",theta),
             option("-k") & value("k truth node count",TruthNodeCount),
@@ -53,7 +55,10 @@ bool ConfigArgs::Parse(int argc, char **argv) {
             option("-beta") & value("beta", beta),
             option("-delta") & value("delta", delta),
             option("-edge") & value("delete edge count",DelEdgeCount),
-            option("-alg") & value("algorithm:[Ris-Eig,Ris-Deg,Lon-Eig,Lon-Deg,Imm,EdgeDel,Deg]",alg)
+            option("-alg") & value("algorithm:[Ris-Eig,Ris-Deg,Lon-Eig,Lon-Deg,Imm,EdgeDel,Deg]",alg),
+            option("-T") & value("T",T),
+            option("-detail") & value("detail",detail),
+            option("-kdetail") & value("-kdetail",kdetail)
             );
     if(!parse(argc, argv, cli)){
         cout<<make_man_page(cli,argv[0]);
@@ -63,8 +68,9 @@ bool ConfigArgs::Parse(int argc, char **argv) {
 }
 
 void ConfigArgs::print(std::ofstream &out) {
+    out<<endl<<endl;
     out<<"algorithm:"<<alg<<endl;
     out<<"T:"<<TimeRound<<" RumorSeed:"<<RumorNodeCount<<" TruthSeed:"<<TruthNodeCount<<endl;
     out<<"theta: "<<theta<<" alpha:"<<alpha<<" alpha2:"<<alpha2<<" beta:"<<beta<<" delta:"<<delta<<endl;
-    out<<"MonteCarlosTimes:"<<MonteCarlosTimes<<" delEdge"<<DelEdgeCount<<endl;
+    out<<"MonteCarlosTimes: "<<MonteCarlosTimes<<" delEdge: "<<DelEdgeCount<<endl;
 }

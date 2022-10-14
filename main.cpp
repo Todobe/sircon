@@ -27,7 +27,7 @@ vector<int> GenerateRumorSet(Graph &G,ConfigArgs &args){
         }
         int node;
         while(rumorFile>>node){
-            res.push_back(node);
+            if(res.size()<args.RumorNodeCount) res.push_back(node);
         }
         rumorFile.close();
     }
@@ -37,10 +37,6 @@ vector<int> GenerateRumorSet(Graph &G,ConfigArgs &args){
 int main(int argc, char* argv[]){
     ConfigArgs args=ConfigArgs();
     if(!args.Parse(argc,argv)) return 0;
-    Graph G=Graph(args);
-    vector<int> T;
-    vector<pair<int,int> > E;
-
     ofstream out;
     out.open(args.output_file,ios::app);
     if(!out.is_open()){
@@ -48,39 +44,110 @@ int main(int argc, char* argv[]){
         exit(0);
     }
     args.print(out);
-    clock_t start_clk = clock();
+
+    Graph G=Graph(args,out);
+
+    vector<int> T;
+    vector<int> R;
+    vector<double> kTime;
+    vector<pair<int,int> > E;
+    vector<pair<double,double> > res;
+    vector<pair<double,double> > avg_res;
+
+
+    clock_t start_time=clock();
     if(args.alg=="Ris-Eig" || args.alg=="Ris-Deg") {
-        T = RisGreedy(G, args.TruthNodeCount, args.theta, args.alpha, args.delta);
+        T = RisGreedy(G, args.TruthNodeCount, args.theta, args.alpha, args.delta,kTime);
     }else if(args.alg=="Lon-Eig" || args.alg=="Lon-Deg"){
-        T = LonGreedy(G,args.TruthNodeCount,args.alpha2,args.delta);
+        T = LonGreedy(G,args.TruthNodeCount,args.alpha2,args.delta,kTime);
     }else if(args.alg=="Imm"){
-        T = ImmGreedy(G,args.TruthNodeCount,args.theta,args.delta);
+        T = ImmGreedy(G,args.TruthNodeCount,args.theta,args.delta,kTime);
     }else if(args.alg=="EdgeDel"){
         E = EdgeDeletion(G,args.DelEdgeCount);
+    }else if(args.alg=="Deg"){
+        T = MaxDegree(G, args.TruthNodeCount,kTime);
     }else{
-        T = MaxDegree(G, args.theta);
-    }
-    clock_t end_clk = clock();
-    double AlgTime = (end_clk - start_clk)/CLOCKS_PER_SEC;
-    out<<"Algorithm Time:"<<AlgTime<<"s."<<endl;
-    out<<"MonteCarlos Result:"<<endl;
-    start_clk = clock();
-    vector<int> R = GenerateRumorSet(G,args);
-    out<<"RumorSize:"<<R.size()<<endl;
-    if(R.size()<20){
-        for(auto node:R){
-            out<<node<<" ";
+        freopen("input.txt","r",stdin);
+        int x;
+        while(cin>>x){
+            T.push_back(x);
         }
-        out<<endl;
+        fclose(stdin);
     }
-    vector<pair<double, double> > res = estimate(G, R, T, E, args);
-    int step=args.TimeRound/10;
-    for(int i=0;i<res.size();i+=step){
-        out<<res[i].first<<" "<<res[i].second<<endl;
+    double totalTime=1.0*(clock()-start_time)/CLOCKS_PER_SEC;
+    out<<"Total Time:"<<totalTime<<endl;
+
+    if(args.alg!="Deg") {
+        out << "k-Times:" << endl;
+        out << 0 << " ";
+        for (int i = 0; i < kTime.size(); i++) {
+            out << kTime[i] << " ";
+        }
+        out << endl;
     }
-    end_clk = clock();
-    double SimTime=(end_clk - start_clk) / CLOCKS_PER_SEC;
-    out<<"Simulation Time:"<<SimTime<<"s."<<endl;
+
+    R = GenerateRumorSet(G,args);
+    out<<"RumorSize:"<<R.size()<<endl;
+    for(auto node:R){
+        out<<node<<" ";
+    }
+    out<<endl;
+    out<<"TruthSize:"<<T.size()<<endl;
+    for(auto node:T){
+        out<<node<<" ";
+    }
+    out<<endl;
+    out<<"MonteCarlos Result:"<<endl;
+    double simTime=0;
+
+    if(args.kdetail) {
+        vector<int> evalT;
+        for (int i = 0; i <= T.size(); i++) {
+            res = estimate(G, R, evalT, E, args, simTime);
+            double res_r = 0;
+            double res_t = 0;
+            if (args.detail) out << "(rumor)k=" << i << ": ";
+            for (int t = 0; t <= args.TimeRound; t++) {
+                if (args.detail) out << res[t].first << " ";
+                res_r += res[t].first;
+            }
+            if (args.detail) out << endl;
+            if (args.detail) out << "(truth)k=" << i << ": ";
+            for (int t = 0; t <= args.TimeRound; t++) {
+                if (args.detail) out << res[t].second << " ";
+                res_t += res[t].second;
+            }
+            if (args.detail) out << endl;
+            avg_res.emplace_back(res_r / (args.TimeRound + 1), res_t / (args.TimeRound + 1));
+            if (i != T.size()) evalT.push_back(T[i]);
+        }
+    }else{
+        res = estimate(G, R, T, E, args, simTime);
+        double res_r = 0;
+        double res_t = 0;
+        if (args.detail) out << "(rumor)k=" << T.size() << ": ";
+        for (int t = 0; t <= args.TimeRound; t++) {
+            if (args.detail) out << res[t].first << " ";
+            res_r += res[t].first;
+        }
+        if (args.detail) out << endl;
+        if (args.detail) out << "(truth)k=" << T.size() << ": ";
+        for (int t = 0; t <= args.TimeRound; t++) {
+            if (args.detail) out << res[t].second << " ";
+            res_t += res[t].second;
+        }
+        if (args.detail) out << endl;
+        avg_res.emplace_back(res_r / (args.TimeRound + 1), res_t / (args.TimeRound + 1));
+    }
+    out << "k-rumor:" << endl;
+    for (int i = 0; i < avg_res.size(); i++) {
+        out << avg_res[i].first << endl;
+    }
+    out << "k-truth:" << endl;
+    for (int i = 0; i < avg_res.size(); i++) {
+        out << avg_res[i].second << endl;
+    }
+    out << "Simulation Time:" << simTime << "s." << endl;
     out.close();
     return 0;
 }
