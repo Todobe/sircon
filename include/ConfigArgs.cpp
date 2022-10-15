@@ -70,7 +70,8 @@ bool ConfigArgs::Parse(int argc, char **argv) {
 void ConfigArgs::print(std::ofstream &out) {
     out<<endl<<endl;
     out<<"algorithm:"<<alg<<endl;
-    out<<"T:"<<TimeRound<<" RumorSeed:"<<RumorNodeCount<<" TruthSeed:"<<TruthNodeCount<<endl;
+    out<<"TimeRound:"<<TimeRound<<" RumorSeed:"<<RumorNodeCount<<" TruthSeed:"<<TruthNodeCount<<endl;
     out<<"theta: "<<theta<<" alpha:"<<alpha<<" alpha2:"<<alpha2<<" beta:"<<beta<<" delta:"<<delta<<endl;
     out<<"MonteCarlosTimes: "<<MonteCarlosTimes<<" delEdge: "<<DelEdgeCount<<endl;
+    out<<"T: "<<T<<endl;
 }
