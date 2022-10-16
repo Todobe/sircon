@@ -55,7 +55,7 @@ bool ConfigArgs::Parse(int argc, char **argv) {
             option("-beta") & value("beta", beta),
             option("-delta") & value("delta", delta),
             option("-edge") & value("delete edge count",DelEdgeCount),
-            option("-alg") & value("algorithm:[Ris-Eig,Ris-Deg,Lon-Eig,Lon-Deg,Imm,EdgeDel,Deg]",alg),
+            option("-alg") & value("algorithm:[Ris-Eig,Ris-Deg,Lon-Eig,Lon-Deg,Imm,EdgeDel,Deg,PageRank,HMP]",alg),
             option("-T") & value("T",T),
             option("-detail") & value("detail",detail),
             option("-kdetail") & value("-kdetail",kdetail)

@@ -53,7 +53,7 @@ int main(int argc, char* argv[]){
     vector<pair<int,int> > E;
     vector<pair<double,double> > res;
     vector<pair<double,double> > avg_res;
-
+    R = GenerateRumorSet(G,args);
 
     clock_t start_time=clock();
     if(args.alg=="Ris-Eig" || args.alg=="Ris-Deg") {
@@ -66,6 +66,11 @@ int main(int argc, char* argv[]){
         E = EdgeDeletion(G,args.DelEdgeCount);
     }else if(args.alg=="Deg"){
         T = MaxDegree(G, args.TruthNodeCount,kTime);
+    }else if(args.alg=="PageRank") {
+        T = PageRank(G,args.TruthNodeCount,kTime);
+    }else if(args.alg=="HMP") {
+        sort(R.begin(),R.end());
+        T = HMP(G,args.TruthNodeCount,R,args.theta,args.beta,kTime);
     }else{
         freopen("input.txt","r",stdin);
         int x;
@@ -86,7 +91,7 @@ int main(int argc, char* argv[]){
         out << endl;
     }
 
-    R = GenerateRumorSet(G,args);
+
     out<<"RumorSize:"<<R.size()<<endl;
     for(auto node:R){
         out<<node<<" ";
