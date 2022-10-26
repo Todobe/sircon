@@ -9,6 +9,7 @@ threshold = int(sys.argv[2]) #second param to control item size
 edges_num = int(sys.argv[3]) #third param, edge number
 dataset = sys.argv[4] #dataset path
 outputFile = sys.argv[5] #outputfile name
+rumorFile = sys.argv[6] #rumorfile name
 
 random.seed(20010312)
 
@@ -113,17 +114,34 @@ while max_val > 0:
 
 fi.write("%d %d\n" % (userCount, len(all_pairs)))
 
+deg=[0]*userCount
 userEdgeCount = 0
 for pair in all_pairs:
     fi.write("%d %d\n" % (pair[0], pair[1]))
+    deg[pair[0]]+=1
     userEdgeCount = userEdgeCount + 1
 
-fi.wirte("0\n")
+
+fi.write("0\n")
 for i in range(0,userCount):
-    fi.wirte("0 0 ")
+    fi.write("0 0 ")
 
 fi.close()
 
 
 print("review Count:",reviewCount)
 print("user num:", userCount, " user edge num:", userEdgeCount)
+
+selected = []
+for i in range(0,userCount):
+    selected.append((i,deg[i]))
+
+selected.sort(key=lambda a:-a[1])
+
+with open(rumorFile, "w") as file:
+    for i in range(0,20):
+        x = selected[random.randint(0,100)][0]
+        print(deg[x])
+        file.write(f"{x} ")
+    file.close()
+
